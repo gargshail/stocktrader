@@ -2,3 +2,4 @@ altair
 pandas
 streamlit
 alpaca-trade-api
+matplotlib
