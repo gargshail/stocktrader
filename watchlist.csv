@@ -1,3 +1,13 @@
-ticker,watchprice,alert, comment
-INTC,60, close > 60, 
-PYPL,300, close > 289,
+ticker, condition, comment
+FRHC,,
+ORLY,,
+EXPE,,
+TSN,,
+ARES,,
+HD,,
+APTS,,
+FTNT,,
+COF,,
+DFS,,
+HRB,,
+
