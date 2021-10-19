@@ -7,6 +7,9 @@ import numpy
 import numpy as np
 import pandas as pd
 import streamlit as st
+from matplotlib.backends.backend_agg import RendererAgg
+_lock = RendererAgg.lock
+
 st.set_page_config(
     page_title="Stocktrader",
     page_icon="🧊",
@@ -43,6 +46,7 @@ def get_sp500_df():
     url = 'https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv'
     return pd.read_csv(url, index_col=0)
 
+
 def get_chart(ticker):
     api = tradeapi.REST()
     bars = api.get_barset([ticker], "5Min", limit=90).df
@@ -52,27 +56,31 @@ def get_chart(ticker):
     market_data_df = pd.DataFrame()
     market_data_df[ticker] = 100*(bars[ticker].close - yesterday_close)/yesterday_close
     last_val = market_data_df[ticker].loc[recent_market_date].iloc[-1]
-    fig = plt.figure(figsize=[8,8])
-    ax1 = fig.add_subplot(211)
-    xvals = market_data_df.loc[recent_market_date].index
-    yvals = market_data_df.loc[recent_market_date]
-    ax1.plot(xvals, yvals, "-" )
-    ax1.axhline(0, linestyle="--")
-    ax1.set_title(ticker, loc='left', fontweight='bold')
-    ax1.set_title(recent_market_date, loc='center', fontsize=9)
-    value_color="green" if last_val >= 0 else "red"
-    ax1.set_title(f"{round(last_val,2)}%", loc='right', color=value_color)
-    ax1.grid(color='grey', linestyle='--', alpha=0.3)
+    with _lock:
+        fig = plt.figure(figsize=[8,8])
+        ax1 = fig.add_subplot(211)
+        xvals = market_data_df.loc[recent_market_date].index
+        yvals = market_data_df.loc[recent_market_date]
+        ax1.plot(xvals, yvals, "-" )
+        ax1.axhline(0, linestyle="--")
+        ax1.set_title(ticker, loc='left', fontweight='bold')
+        ax1.set_title(recent_market_date, loc='center', fontsize=9)
+        value_color="green" if last_val >= 0 else "red"
+        ax1.set_title(f"{round(last_val,2)}%", loc='right', color=value_color)
+        ax1.grid(color='grey', linestyle='--', alpha=0.3)
     return fig
 
+####
 def get_sp500_bar_chart():
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1)
-    sorted_data = ticker_summary.todays_change.sort_values(ascending=False)
-    ax.bar(sorted_data.index, sorted_data)
+    with _lock:
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+        sorted_data = ticker_summary.todays_change.sort_values(ascending=False)
+        ax.bar(sorted_data.index, sorted_data)
+        plt.xticks([], [])
     return fig
 
-@st.cache
+####
 def get_ticker_summary():
     api = tradeapi.REST()
     tickers = get_sp500_df().index
@@ -89,6 +97,18 @@ def get_ticker_summary():
         {ticker: data[ticker].tail(2).close.pct_change().iloc[1] * 100 for ticker in tickers})
     return ticker_summary
 
+def get_watchlist():
+    url = 'https://raw.githubusercontent.com/gargshail/stocktrader/main/watchlist.csv'
+    watchlist = pd.read_csv(url, index_col=0)
+    api = tradeapi.REST()
+    bars = api.get_barset(watchlist.index, "day", limit=2).df
+    for wticker in list({a[0] for a in bars.columns.values}):
+        bars[wticker, 'todays_change'] = bars[wticker].close.pct_change()
+    df = pd.DataFrame(index=list({a[0] for a in bars.columns.values}))
+    df['todays_change'] = [bars[ticker, 'todays_change'].tail(1).values[0] for ticker in df.index]
+    watchlist = watchlist.join(df)
+    return watchlist
+
 col1, col2, col3 = st.columns(3)
 with col1:
     st.write(get_chart('SPY'))
@@ -101,19 +121,34 @@ with col3:
 
 
 sp500 = get_sp500_df()
-tickers_for_chart = ["INTC", "SPY"]
+watchlist = get_watchlist()
+tickers_for_chart = watchlist.index
+images = []
 for ticker in tickers_for_chart:
-    st.image(f"https://finviz.com/chart.ashx?t={ticker}&ta=1&p=d&s=m&rev={random.random()*1000}") 
-    
+    images.append(f"https://finviz.com/chart.ashx?t={ticker}&ta=1&p=d&s=m&rev={random.random()*1000}")
+
+st.image(images)
+
 ticker_summary = get_ticker_summary()
 st.dataframe(sp500.join(ticker_summary))
 up_count = ticker_summary.query('todays_change > 0').count()[0]
 down_count = ticker_summary.query('todays_change < 0').count()[0]
 
-st.markdown(f"Up:{up_count}")
-st.markdown(f"Down:{down_count}")
 
-st.write(get_sp500_bar_chart())
+
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.write(get_sp500_bar_chart())
+
+with col2:
+    st.markdown(f"Up:{up_count}")
+    st.markdown(f"Down:{down_count}")
+
+with col3:
+    st.write("something here")
+
+st.dataframe(watchlist)
+
 # fig = plt.figure()
 # ax = fig.add_subplot(1,1,1)
 # sorted_data = ticker_summary.todays_change.sort_values(ascending=False)
