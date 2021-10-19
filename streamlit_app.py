@@ -145,8 +145,10 @@ with col1:
     st.write(get_sp500_bar_chart())
 
 with col2:
-    st.markdown(f"Up:{up_count}")
-    st.markdown(f"Down:{down_count}")
+    st.metric(label="Up", value=f"{up_count}")
+    st.metric(label="Down", value=f"{down_count}")
+    # st.markdown(f"Up:{up_count}")
+    # st.markdown(f"Down:{down_count}")
 
 with col3:
     st.write("something here")
