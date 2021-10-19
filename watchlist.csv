@@ -1,2 +1,3 @@
-INTC
-PYPL
+ticker,watchprice,comment
+INTC,,
+PYPL,,
