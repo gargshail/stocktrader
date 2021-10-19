@@ -1,3 +1,3 @@
-ticker,watchprice,comment
-INTC,,
-PYPL,,
+ticker,watchprice,alert, comment
+INTC,60, close > 60, 
+PYPL,300, close > 289,
