@@ -121,6 +121,8 @@ with col3:
 
 
 sp500 = get_sp500_df()
+
+st.markdown("# Watchlist")
 watchlist = get_watchlist()
 tickers_for_chart = watchlist.index
 images = []
@@ -128,8 +130,10 @@ for ticker in tickers_for_chart:
     images.append(f"https://finviz.com/chart.ashx?t={ticker}&ta=1&p=d&s=m&rev={random.random()*1000}")
 
 st.image(images)
+st.dataframe(watchlist)
 
 ticker_summary = get_ticker_summary()
+st.markdown("# S&P500 ")
 st.dataframe(sp500.join(ticker_summary))
 up_count = ticker_summary.query('todays_change > 0').count()[0]
 down_count = ticker_summary.query('todays_change < 0').count()[0]
@@ -147,7 +151,7 @@ with col2:
 with col3:
     st.write("something here")
 
-st.dataframe(watchlist)
+
 
 # fig = plt.figure()
 # ax = fig.add_subplot(1,1,1)
