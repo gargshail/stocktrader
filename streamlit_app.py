@@ -222,7 +222,10 @@ with col2:
 with col3:
     st.markdown("something here")
 
-st.dataframe(get_vcp_list())
+vcp_list = get_vcp_list()
+st.dataframe(vcp_list)
+
+st.write(f"{list(vcp_list.index)}".replace("'", "").replace("[","").replace("]",""))
 # fig = plt.figure()
 # ax = fig.add_subplot(1,1,1)
 # sorted_data = ticker_summary.todays_change.sort_values(ascending=False)
