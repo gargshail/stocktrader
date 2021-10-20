@@ -109,6 +109,75 @@ def get_watchlist():
     watchlist = watchlist.join(df)
     return watchlist
 
+
+def get_vcp_list():
+    filtered_symbols = list(pd.read_csv("https://raw.githubusercontent.com/gargshail/stocktrader/main/tickers.csv",
+                                        index_col=0).index)
+    api = tradeapi.REST()
+    batch_size = 100
+    chunked = [filtered_symbols[i * batch_size:(i + 1) * batch_size] for i in
+               range((len(filtered_symbols) + batch_size - 1) // batch_size)]
+    data = {}
+    for chunk in chunked:
+        bars = api.get_barset(chunk, "day", limit=250)
+        for ticker in chunk:
+            data[ticker] = bar_to_df(bars[ticker])
+
+    for i in data:
+        if data[i].close.count() < 210 or data[i].high.count() < 210:
+            # print(f"{i} {data[i].close.count()}")
+            try:
+                filtered_symbols.remove(i)
+            except ValueError:
+                print(f"Already removed {i}")
+                continue
+
+    for ticker in filtered_symbols:
+        data[ticker]['ma50'] = data[ticker].close.rolling(50).mean()
+        data[ticker]['vma50'] = data[ticker].volume.rolling(50).mean()
+        data[ticker]['pchange'] = 100 * data[ticker].close.pct_change()
+        data[ticker]['tight'] = data[ticker].pchange.abs() < 1
+        data[ticker]['tightcount'] = data[ticker].groupby(
+            (data[ticker]['tight'] != data[ticker]['tight'].shift(1)).cumsum()).cumcount() + 1
+        data[ticker]['max10tightcount'] = data[ticker].tightcount.rolling(10).max()
+        data[ticker]['volume_vma50_ratio'] = data[ticker].volume / data[ticker].vma50
+        data[ticker]['volume_30pct_below'] = data[ticker]['volume_vma50_ratio'] < 0.7
+        data[ticker]['low_volume_10day_count'] = data[ticker]['volume_30pct_below'].rolling(10).sum()
+
+    ticker_summary = pd.DataFrame(index=filtered_symbols)
+    ticker_summary['open'] = pd.Series({t: data[t].open[-1] for t in filtered_symbols})
+    ticker_summary['high'] = pd.Series({ticker: data[ticker].high[-1] for ticker in filtered_symbols})
+    ticker_summary['low'] = pd.Series({ticker: data[ticker].low[-1] for ticker in filtered_symbols})
+    ticker_summary['close'] = pd.Series({ticker: data[ticker].close[-1] for ticker in filtered_symbols})
+    ticker_summary['volume'] = pd.Series({ticker: data[ticker].volume[-1] for ticker in filtered_symbols})
+    ticker_summary['ma50'] = pd.Series({ticker: data[ticker].ma50[-1] for ticker in filtered_symbols})
+    ticker_summary['vma50'] = pd.Series({ticker: data[ticker].vma50[-1] for ticker in filtered_symbols})
+    ticker_summary['todays_change'] = pd.Series(
+        {ticker: data[ticker].tail(2).close.pct_change().iloc[1] * 100 for ticker in filtered_symbols})
+    ticker_summary['maxmin_10day_perct'] = pd.Series({ticker: 100 * (data[ticker].close.tail(10).max()
+                                                                     - data[ticker].close.tail(10).min()) / data[
+                                                                  ticker].close.tail(10).min()
+                                                      for ticker in filtered_symbols})
+    ticker_summary['maxmin_5day_perct'] = pd.Series({ticker: 100 * (data[ticker].close.tail(5).max()
+                                                                    - data[ticker].close.tail(5).min()) / data[
+                                                                 ticker].close.tail(5).min()
+                                                     for ticker in filtered_symbols})
+    ticker_summary['maxmin_3day_perct'] = pd.Series({ticker: 100 * (data[ticker].close.tail(3).max()
+                                                                    - data[ticker].close.tail(3).min()) / data[
+                                                                 ticker].close.tail(3).min()
+                                                     for ticker in filtered_symbols})
+    ticker_summary['max10tightcount'] = pd.Series(
+        {ticker: data[ticker].max10tightcount[-1] for ticker in filtered_symbols})
+    ticker_summary['low_volume_10day_count'] = pd.Series(
+        {ticker: data[ticker]['low_volume_10day_count'][-1] for ticker in filtered_symbols})
+
+    vcp_stocks = ticker_summary[
+        (ticker_summary['maxmin_10day_perct'] <= 5)
+        & (ticker_summary['max10tightcount'] >= 3)
+        & (ticker_summary['low_volume_10day_count'] >= 5)
+        ]
+    return vcp_stocks
+
 col1, col2, col3 = st.columns(3)
 with col1:
     st.write(get_chart('SPY'))
@@ -151,10 +220,9 @@ with col2:
     # st.markdown(f"Down:{down_count}")
 
 with col3:
-    st.write("something here")
+    st.markdown("something here")
 
-
-
+st.dataframe(get_vcp_list())
 # fig = plt.figure()
 # ax = fig.add_subplot(1,1,1)
 # sorted_data = ticker_summary.todays_change.sort_values(ascending=False)
