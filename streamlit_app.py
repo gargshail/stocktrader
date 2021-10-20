@@ -7,6 +7,7 @@ import numpy
 import numpy as np
 import pandas as pd
 import streamlit as st
+import base64
 from matplotlib.backends.backend_agg import RendererAgg
 _lock = RendererAgg.lock
 
@@ -109,6 +110,15 @@ def get_watchlist():
     watchlist = watchlist.join(df)
     return watchlist
 
+def get_table_download_link(df):
+    """Generates a link allowing the data in a given panda dataframe to be downloaded
+    in:  dataframe
+    out: href string
+    """
+    csv = df.to_csv(index=True)
+    b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
+    href = f'<a href="data:file/csv;base64,{b64}">Download csv file</a>'
+    return href
 
 def get_vcp_list():
     filtered_symbols = list(pd.read_csv("https://raw.githubusercontent.com/gargshail/stocktrader/main/tickers.csv",
@@ -226,6 +236,7 @@ vcp_list = get_vcp_list()
 st.dataframe(vcp_list)
 
 st.write(f"{list(vcp_list.index)}".replace("'", "").replace("[","").replace("]",""))
+st.markdown(get_table_download_link(vcp_list), unsafe_allow_html=True)
 # fig = plt.figure()
 # ax = fig.add_subplot(1,1,1)
 # sorted_data = ticker_summary.todays_change.sort_values(ascending=False)
