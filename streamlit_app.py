@@ -151,7 +151,7 @@ def get_vcp_list():
             (data[ticker]['tight'] != data[ticker]['tight'].shift(1)).cumsum()).cumcount() + 1
         data[ticker]['max10tightcount'] = data[ticker].tightcount.rolling(10).max()
         data[ticker]['volume_vma50_ratio'] = data[ticker].volume / data[ticker].vma50
-        data[ticker]['volume_30pct_below'] = data[ticker]['volume_vma50_ratio'] < 0.7
+        data[ticker]['volume_30pct_below'] = data[ticker]['volume_vma50_ratio'] < 0.8
         data[ticker]['low_volume_10day_count'] = data[ticker]['volume_30pct_below'].rolling(10).sum()
 
     ticker_summary = pd.DataFrame(index=filtered_symbols)
@@ -182,9 +182,9 @@ def get_vcp_list():
         {ticker: data[ticker]['low_volume_10day_count'][-1] for ticker in filtered_symbols})
 
     vcp_stocks = ticker_summary[
-        (ticker_summary['maxmin_10day_perct'] <= 5)
-        & (ticker_summary['max10tightcount'] >= 3)
-        & (ticker_summary['low_volume_10day_count'] >= 5)
+        (ticker_summary['maxmin_10day_perct'] <= 10)
+        & (ticker_summary['max10tightcount'] >= 4)
+        & (ticker_summary['low_volume_10day_count'] >= 4)
         ]
     return vcp_stocks
 
