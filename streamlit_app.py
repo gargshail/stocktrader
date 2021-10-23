@@ -201,15 +201,18 @@ with col3:
 
 sp500 = get_sp500_df()
 
-st.markdown("# Watchlist")
-watchlist = get_watchlist()
-tickers_for_chart = watchlist.index
+st.markdown("# VCP List")
+vcp_list = get_vcp_list()
+# watchlist = get_watchlist()
+tickers_for_chart = vcp_list.index
 images = []
 for ticker in tickers_for_chart:
     images.append(f"https://finviz.com/chart.ashx?t={ticker}&ta=1&p=d&s=m&rev={random.random()*1000}")
 
 st.image(images)
-st.dataframe(watchlist)
+st.dataframe(vcp_list)
+st.write(f"{list(vcp_list.index)}".replace("'", "").replace("[","").replace("]",""))
+st.markdown(get_table_download_link(vcp_list), unsafe_allow_html=True)
 
 ticker_summary = get_ticker_summary()
 st.markdown("# S&P500 ")
@@ -232,11 +235,8 @@ with col2:
 with col3:
     st.markdown("something here")
 
-vcp_list = get_vcp_list()
-st.dataframe(vcp_list)
 
-st.write(f"{list(vcp_list.index)}".replace("'", "").replace("[","").replace("]",""))
-st.markdown(get_table_download_link(vcp_list), unsafe_allow_html=True)
+
 # fig = plt.figure()
 # ax = fig.add_subplot(1,1,1)
 # sorted_data = ticker_summary.todays_change.sort_values(ascending=False)
