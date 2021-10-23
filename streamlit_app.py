@@ -182,8 +182,8 @@ def get_vcp_list():
         {ticker: data[ticker]['low_volume_10day_count'][-1] for ticker in filtered_symbols})
 
     vcp_stocks = ticker_summary[
-        (ticker_summary['maxmin_10day_perct'] <= 7)
-        & (ticker_summary['max10tightcount'] >= 3)
+        (ticker_summary['maxmin_10day_perct'] <= 10)
+        & (ticker_summary['max10tightcount'] >= 4)
         & (ticker_summary['low_volume_10day_count'] >= 4)
         ]
     return vcp_stocks
