@@ -203,8 +203,6 @@ def get_vcp_list(max10tightcount=4, low_volume_10day_count=4, maxmin_10day_perct
 display_charts = st.sidebar.checkbox('Display Charts', True)
 tight_days = st.sidebar.slider("tightDays", 0, 10,4)
 low_volume_days = st.sidebar.slider("lowVolumeDays", 0, 10,4)
-st.write(f"tight days {tight_days}, low 1 volume days{low_volume_days}")
-st.write(f"Display charts {display_charts}")
 
 col1, col2, col3 = st.columns(3)
 with col1:
