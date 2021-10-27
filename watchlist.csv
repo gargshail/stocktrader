@@ -1,3 +1,4 @@
 ticker,trigger,comment
 APTS, close > 10, test
 PSA, volume > 300000, another test
+GLOB, close > 314, IT services hot area
