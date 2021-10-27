@@ -45,7 +45,9 @@ def bar_to_df(bars) :
 @st.cache
 def get_sp500_df():
     url = 'https://raw.githubusercontent.com/datasets/s-and-p-500-companies/master/data/constituents.csv'
+
     return pd.read_csv(url, index_col=0)
+
 
 
 def get_chart(ticker):
@@ -72,57 +74,22 @@ def get_chart(ticker):
     return fig
 
 ####
-def get_sp500_bar_chart():
+def get_bar_chart():
     with _lock:
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
-        sorted_data = ticker_summary.todays_change.sort_values(ascending=False)
+        sorted_data = get_ticker_summary().todays_change.sort_values(ascending=False)
         ax.bar(sorted_data.index, sorted_data)
         plt.xticks([], [])
     return fig
 
 ####
 def get_ticker_summary():
-    api = tradeapi.REST()
-    tickers = get_sp500_df().index
-    batch_size = 100
-    chunked = [tickers[i * batch_size:(i + 1) * batch_size] for i in
-               range((len(tickers) + batch_size - 1) // batch_size)]
-    data = {}
-    for chunk in chunked:
-        bars = api.get_barset(chunk, "day", limit=2)
-        for ticker in chunk:
-            data[ticker] = bar_to_df(bars[ticker])
-    ticker_summary = pd.DataFrame(index=tickers)
-    ticker_summary['todays_change'] = pd.Series(
-        {ticker: data[ticker].tail(2).close.pct_change().iloc[1] * 100 for ticker in tickers})
-    return ticker_summary
-
-def get_watchlist():
-    url = 'https://raw.githubusercontent.com/gargshail/stocktrader/main/watchlist.csv'
-    watchlist = pd.read_csv(url, index_col=0)
-    api = tradeapi.REST()
-    bars = api.get_barset(watchlist.index, "day", limit=2).df
-    for wticker in list({a[0] for a in bars.columns.values}):
-        bars[wticker, 'todays_change'] = bars[wticker].close.pct_change()
-    df = pd.DataFrame(index=list({a[0] for a in bars.columns.values}))
-    df['todays_change'] = [bars[ticker, 'todays_change'].tail(1).values[0] for ticker in df.index]
-    watchlist = watchlist.join(df)
-    return watchlist
-
-def get_table_download_link(df):
-    """Generates a link allowing the data in a given panda dataframe to be downloaded
-    in:  dataframe
-    out: href string
-    """
-    csv = df.to_csv(index=True)
-    b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
-    href = f'<a href="data:file/csv;base64,{b64}">Download csv file</a>'
-    return href
-
-def get_vcp_list():
     filtered_symbols = list(pd.read_csv("https://raw.githubusercontent.com/gargshail/stocktrader/main/tickers.csv",
                                         index_col=0).index)
+
+    # filtered_symbols = list(pd.read_csv("tickers.csv", index_col=0).index)
+
     api = tradeapi.REST()
     batch_size = 100
     chunked = [filtered_symbols[i * batch_size:(i + 1) * batch_size] for i in
@@ -180,7 +147,50 @@ def get_vcp_list():
         {ticker: data[ticker].max10tightcount[-1] for ticker in filtered_symbols})
     ticker_summary['low_volume_10day_count'] = pd.Series(
         {ticker: data[ticker]['low_volume_10day_count'][-1] for ticker in filtered_symbols})
+    return ticker_summary
 
+def get_watchlist():
+    url = 'https://raw.githubusercontent.com/gargshail/stocktrader/main/watchlist.csv'
+    # url = "watchlist.csv"
+    watchlist = pd.read_csv(url, index_col=0)
+    # api = tradeapi.REST()
+    # bars = api.get_barset(watchlist.index, "day", limit=2).df
+    # for wticker in list({a[0] for a in bars.columns.values}):
+    #     bars[wticker, 'todays_change'] = bars[wticker].close.pct_change()
+    # df = pd.DataFrame(index=list({a[0] for a in bars.columns.values}))
+    # df['todays_change'] = [bars[ticker, 'todays_change'].tail(1).values[0] for ticker in df.index]
+    # watchlist = watchlist.join(df)
+    return watchlist
+
+def get_table_download_link(df):
+    """Generates a link allowing the data in a given panda dataframe to be downloaded
+    in:  dataframe
+    out: href string
+    """
+    csv = df.to_csv(index=True)
+    b64 = base64.b64encode(csv.encode()).decode()  # some strings <-> bytes conversions necessary here
+    href = f'<a href="data:file/csv;base64,{b64}">Download csv file</a>'
+    return href
+
+
+def get_alerts():
+    wlist = get_watchlist()
+    ticker_summary = get_ticker_summary()
+    combined = wlist.join(ticker_summary)
+    # st.dataframe(combined)
+    triggered_index = []
+    for i, row in combined.iterrows():
+        cols = row.index
+        trigger = row['trigger']
+        for c in cols:
+            trigger = trigger.replace(c, f"row.{c}")
+        if eval(trigger):
+            triggered_index.append(i)
+    return combined.loc[triggered_index]
+
+
+def get_vcp_list():
+    ticker_summary = get_ticker_summary()
     vcp_stocks = ticker_summary[
         (ticker_summary['maxmin_10day_perct'] <= 5)
         & (ticker_summary['max10tightcount'] >= 4)
@@ -214,33 +224,6 @@ st.dataframe(vcp_list)
 st.write(f"{list(vcp_list.index)}".replace("'", "").replace("[","").replace("]",""))
 st.markdown(get_table_download_link(vcp_list), unsafe_allow_html=True)
 
-ticker_summary = get_ticker_summary()
-st.markdown("# S&P500 ")
-st.dataframe(sp500.join(ticker_summary))
-up_count = ticker_summary.query('todays_change > 0').count()[0]
-down_count = ticker_summary.query('todays_change < 0').count()[0]
-
-
-
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.write(get_sp500_bar_chart())
-
-with col2:
-    st.metric(label="Up", value=f"{up_count}")
-    st.metric(label="Down", value=f"{down_count}")
-    # st.markdown(f"Up:{up_count}")
-    # st.markdown(f"Down:{down_count}")
-
-with col3:
-    st.markdown("something here")
-
-
-
-# fig = plt.figure()
-# ax = fig.add_subplot(1,1,1)
-# sorted_data = ticker_summary.todays_change.sort_values(ascending=False)
-# ax.bar(sorted_data.index, sorted_data)
-# # ax.set_xticklabels([])
-# st.write(fig)
+st.markdown("## Alerts")
+st.dataframe(get_alerts())
 
