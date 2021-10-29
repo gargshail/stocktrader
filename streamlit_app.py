@@ -121,6 +121,7 @@ def get_ticker_summary():
             data[ticker]['volume_vma50_ratio'] = data[ticker].volume / data[ticker].vma50
             data[ticker]['volume_30pct_below'] = data[ticker]['volume_vma50_ratio'] < 0.7
             data[ticker]['low_volume_10day_count'] = data[ticker]['volume_30pct_below'].rolling(10).sum()
+            data[ticker]['successive_low_volume_count'] = data[ticker].groupby((data[ticker]['volume_30pct_below'] != data[ticker]['volume_30pct_below'].shift(1)).cumsum()).cumcount() + 1
 
         ticker_summary = pd.DataFrame(index=filtered_symbols)
         ticker_summary['open'] = pd.Series({t: data[t].open[-1] for t in filtered_symbols})
@@ -129,7 +130,7 @@ def get_ticker_summary():
         ticker_summary['close'] = pd.Series({ticker: data[ticker].close[-1] for ticker in filtered_symbols})
         ticker_summary['volume'] = pd.Series({ticker: data[ticker].volume[-1] for ticker in filtered_symbols})
         ticker_summary['ma50'] = pd.Series({ticker: data[ticker].ma50[-1] for ticker in filtered_symbols})
-        ticker_summary['vma50'] = pd.Series({ticker: data[ticker].vma50[-1] for ticker in filtered_symbols})
+        ticker_summary['vma50'] = pd.Series({ticker:int(data[ticker].vma50[-1]) for ticker in filtered_symbols})
         ticker_summary['todays_change'] = pd.Series(
             {ticker: data[ticker].tail(2).close.pct_change().iloc[1] * 100 for ticker in filtered_symbols})
         ticker_summary['maxmin_10day_perct'] = pd.Series({ticker: 100 * (data[ticker].close.tail(10).max()
@@ -148,6 +149,8 @@ def get_ticker_summary():
             {ticker: data[ticker].max10tightcount[-1] for ticker in filtered_symbols})
         ticker_summary['low_volume_10day_count'] = pd.Series(
             {ticker: data[ticker]['low_volume_10day_count'][-1] for ticker in filtered_symbols})
+        ticker_summary['successive_low_volume_count'] = pd.Series(
+            {ticker: data[ticker]['successive_low_volume_count'][-1] for ticker in filtered_symbols})
         st.session_state['ticker_summary'] = ticker_summary
     return st.session_state['ticker_summary']
 
@@ -191,19 +194,20 @@ def get_alerts():
     return combined.loc[triggered_index]
 
 
-def get_vcp_list(max10tightcount=4, low_volume_10day_count=4, maxmin_10day_perct=5):
+def get_vcp_list(max10tightcount=4, low_volume_10day_count=4, maxmin_10day_perct=5, successive_low_volume_count=1):
     ticker_summary = get_ticker_summary()
     vcp_stocks = ticker_summary[
         (ticker_summary['maxmin_10day_perct'] <= maxmin_10day_perct)
         & (ticker_summary['max10tightcount'] >= max10tightcount)
         & (ticker_summary['low_volume_10day_count'] >= low_volume_10day_count)
+        & (ticker_summary['successive_low_volume_count'] >= successive_low_volume_count)
         ]
     return vcp_stocks
 
 display_charts = st.sidebar.checkbox('Display Charts', True)
 tight_days = st.sidebar.slider("tightDays", 0, 10,4)
 low_volume_days = st.sidebar.slider("lowVolumeDays", 0, 10,4)
-
+slvc = st.sidebar.slider("successive low volume count", 0, 10, 1)
 col1, col2, col3 = st.columns(3)
 with col1:
     st.write(get_chart('SPY'))
@@ -218,7 +222,7 @@ with col3:
 sp500 = get_sp500_df()
 
 st.markdown("# VCP List")
-vcp_list = get_vcp_list(tight_days, low_volume_days)
+vcp_list = get_vcp_list(tight_days, low_volume_days, successive_low_volume_count=slvc)
 # watchlist = get_watchlist()
 
 if display_charts:
