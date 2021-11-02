@@ -1,6 +1,6 @@
 ticker,trigger,comment
 GLOB, close > 314, IT services hot area
-DEO. close > 202, good funda
+DEO, close > 202, good funda
 ACRE, close> 16.04, earnings soon
 CNP, close > 27.02, earnings soon
 BOX, close > 26.76, earnings
