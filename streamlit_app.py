@@ -90,6 +90,10 @@ def get_ticker_summary():
                                             index_col=0).index)
 
         # filtered_symbols = list(pd.read_csv("tickers.csv", index_col=0).index)
+        wlist = get_watchlist().index
+        for ticker in wlist:
+            if ticker not in filtered_symbols:
+                filtered_symbols.append(ticker)
 
         api = tradeapi.REST()
         batch_size = 100
