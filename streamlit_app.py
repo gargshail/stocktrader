@@ -247,7 +247,8 @@ st.markdown(get_table_download_link(vcp_list), unsafe_allow_html=True)
 
 st.markdown("## Alerts")
 alerts = get_alerts()
-st.dataframe(alerts)
+columns_to_display = ['trigger','comment','open','high','low','close','volume','todays_change']
+st.dataframe(alerts[columns_to_display])
 tickers_in_alert = alerts.index
 alert_charts = []
 for ticker in tickers_in_alert:
