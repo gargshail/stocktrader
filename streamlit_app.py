@@ -248,9 +248,12 @@ st.markdown(get_table_download_link(vcp_list), unsafe_allow_html=True)
 st.markdown("## Alerts")
 alerts = get_alerts()
 columns_to_display = ['trigger','comment','open','high','low','close','volume','todays_change']
-st.dataframe(alerts[columns_to_display])
+format_dict = {col_name: '${:,.2f}' for col_name in alerts.select_dtypes(float).columns}
+st.dataframe(alerts[columns_to_display].style.bar(subset=['todays_change'], align='mid', color=['#d65f5f', '#5fba7d']) \
+             .format(format_dict))
 tickers_in_alert = alerts.index
 alert_charts = []
 for ticker in tickers_in_alert:
     alert_charts.append(f"https://finviz.com/chart.ashx?t={ticker}&ta=1&p=d&s=m&rev={random.random() * 1000}")
 st.image(alert_charts)
+
