@@ -246,5 +246,10 @@ st.write(f"{list(vcp_list.index)}".replace("'", "").replace("[","").replace("]",
 st.markdown(get_table_download_link(vcp_list), unsafe_allow_html=True)
 
 st.markdown("## Alerts")
-st.dataframe(get_alerts())
-
+alerts = get_alerts()
+st.dataframe(alerts)
+tickers_in_alert = alerts.index
+alert_charts = []
+for ticker in tickers_in_alert:
+    alert_charts.append(f"https://finviz.com/chart.ashx?t={ticker}&ta=1&p=d&s=m&rev={random.random() * 1000}")
+st.image(alert_charts)
